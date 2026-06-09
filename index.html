@@ -1012,10 +1012,16 @@ function renderPMList(){
     const items=prods.filter(p=>p.cat===cat);if(!items.length)return;
     h+=`<div style="font-weight:600;padding:8px 0;color:var(--g600)">${cat} (${items.length})</div>`;
     items.forEach(p=>{
-      h+=`<div class="lst-item">
-        <div class="lst-info"><div class="nm">${p.name}</div><div class="ds">${p.unit} · ${p.enabled?'启用':'停用'}</div></div>
-        <div class="lst-right"><div class="sb">${fmtN(getStock(p.id))} 库存</div>
-          <button class="btn btn-sm ${p.enabled?'btn-gh':'btn-pri'}" style="margin-top:4px;font-size:12px" onclick="toggleProd('${p.id}')">${p.enabled?'停用':'启用'}</button></div>
+      const stk=getStock(p.id);
+      h+=`<div class="lst-item" onclick="editProduct('${p.id}')" style="cursor:pointer">
+        <div class="lst-info"><div class="nm">${p.name}</div><div class="ds">${p.unit} · ${p.enabled?'启用':'停用'} · ${fmtN(stk)}库存</div></div>
+        <div class="lst-right" onclick="event.stopPropagation()">
+          <div style="display:flex;gap:4px">
+            <button class="btn btn-sm btn-gh" style="font-size:12px" onclick="editProduct('${p.id}')">编辑</button>
+            <button class="btn btn-sm ${p.enabled?'btn-gh':'btn-pri'}" style="font-size:12px" onclick="toggleProd('${p.id}')">${p.enabled?'停用':'启用'}</button>
+          </div>
+          ${stk===0?`<button class="btn btn-sm btn-dan" style="font-size:11px;margin-top:4px" onclick="deleteProduct('${p.id}')">删除</button>`:''}
+        </div>
       </div>`;
     });
   });
@@ -1023,6 +1029,71 @@ function renderPMList(){
 }
 
 function toggleProd(id){const p=db.products.find(x=>x.id===id);if(p){p.enabled=!p.enabled;save();renderPMList();toast(p.enabled?'已启用':'已停用','i')}}
+
+function editProduct(id){
+  const p=db.products.find(x=>x.id===id);if(!p)return;
+  const isLumber=p.cat==='木方';
+  // Collect existing values for datalists
+  const allMats=[...new Set([...(isLumber?LM:BM),...db.products.filter(x=>x.cat===p.cat).map(x=>x.material).filter(Boolean)])];
+  const allDims=[...new Set([...(isLumber?LD:BD),...db.products.filter(x=>x.cat===p.cat).map(x=>x.dimension).filter(Boolean)])];
+  const allSpecs=isLumber
+    ? [...new Set([...LL,...db.products.filter(x=>x.cat==='木方').map(x=>x.length).filter(Boolean)])]
+    : [...new Set([...BT,...db.products.filter(x=>x.cat==='模板').map(x=>x.thickness).filter(Boolean)])];
+
+  let h=`<div class="fm"><label>类别</label><input class="fc" value="${p.cat}" readonly style="background:var(--g50)"></div>
+    <div class="fm"><label>产品名称</label><input class="fc" id="epName" value="${p.name}" placeholder="输入产品名称"></div>
+    <div class="fm"><label>材质</label><input class="fc" id="epMat" list="epMatList" value="${p.material||''}"><datalist id="epMatList">${allMats.map(m=>`<option value="${m}">`).join('')}</datalist></div>
+    <div class="fm"><label>截面尺寸</label><input class="fc" id="epDim" list="epDimList" value="${p.dimension||''}"><datalist id="epDimList">${allDims.map(d=>`<option value="${d}">`).join('')}</datalist></div>
+    <div class="fm"><label>${isLumber?'长度':'厚度(cm)'}</label><input class="fc" id="epSpec" list="epSpecList" value="${isLumber?(p.length||''):(p.thickness||'')}"><datalist id="epSpecList">${allSpecs.map(s=>`<option value="${s}">`).join('')}</datalist></div>
+    <div class="fm"><label>单位</label><select class="fc" id="epUnit">
+      ${['根','张','件','捆'].map(u=>`<option ${u===p.unit?'selected':''}>${u}</option>`).join('')}
+    </select></div>
+    <button class="btn btn-pri btn-block btn-lg" onclick="saveEditProduct('${id}')">保存修改</button>`;
+
+  if(getStock(id)===0){
+    h+=`<button class="btn btn-dan btn-block" style="margin-top:8px" onclick="deleteProduct('${id}')">删除产品</button>`;
+  } else {
+    h+=`<div style="text-align:center;margin-top:12px;font-size:13px;color:var(--g400)">有库存记录的产品无法删除</div>`;
+  }
+  openSheet('编辑产品',h);
+}
+
+function saveEditProduct(id){
+  const p=db.products.find(x=>x.id===id);if(!p)return;
+  const name=$('epName').value.trim();
+  const mat=$('epMat').value.trim();
+  const dim=$('epDim').value.trim();
+  const spec=$('epSpec').value.trim();
+  const unit=$('epUnit').value;
+  if(!name){toast('请输入产品名称','e');return}
+  if(!mat){toast('请输入材质','e');return}
+  if(!dim){toast('请输入截面尺寸','e');return}
+  if(!spec){toast(`请输入${p.cat==='木方'?'长度':'厚度'}`,'e');return}
+  // Check duplicate (exclude self)
+  if(db.products.some(x=>x.id!==id&&x.name===name&&x.cat===p.cat)){toast('同名产品已存在','w');return}
+  p.name=name;p.material=mat;p.dimension=dim;p.unit=unit;
+  if(p.cat==='木方')p.length=spec;else p.thickness=spec;
+  save();closeSheet();renderPMList();toast('已保存','s');
+}
+
+function deleteProduct(id){
+  const p=db.products.find(x=>x.id===id);if(!p)return;
+  const stk=getStock(id);
+  if(stk>0){toast('该产品有库存记录，无法删除','e');return}
+  const hasRecords=db.records.some(r=>r.productId===id);
+  closeSheet();
+  setTimeout(()=>{
+    openSheet('确认删除',`<div class="cfm"><div class="ic">⚠️</div>
+      <p>确定删除 <strong>${p.name}</strong> 吗？${hasRecords?'<br><span style="font-size:12px;color:var(--wrn)">该产品有历史单据记录，删除后单据仍保留但产品名显示为"未知"</span>':''}</p>
+      <div class="acts"><button class="btn btn-gh" onclick="closeSheet()">取消</button>
+        <button class="btn btn-dan" onclick="doDeleteProduct('${id}')">确认删除</button></div></div>`);
+  },350);
+}
+
+function doDeleteProduct(id){
+  db.products=db.products.filter(p=>p.id!==id);
+  save();closeSheet();renderPMList();toast('已删除','i');
+}
 
 function openAddProduct(){
   let h=`<div class="fm"><label>类别</label>
