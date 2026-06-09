@@ -875,6 +875,7 @@ function submitPayment(cid){
 function renderMe(){
   let h=`<div class="cd"><div class="cd-b" style="padding:0">`;
   const items=[
+    {ic:'📥',nm:'批量初始入库',ds:'一次性录入所有产品初始库存',fn:'openBatchInit()'},
     {ic:'📊',nm:'报表统计',ds:'出入库汇总和趋势',fn:'openReports()'},
     {ic:'📋',nm:'产品管理',ds:`${db.products.length}种产品`,fn:'openProductMgmt()'},
     {ic:'📝',nm:'库存盘点',ds:'校准系统与实际库存',fn:'openStocktaking()'},
@@ -1112,6 +1113,99 @@ function doStocktaking(){
   toast(`盘点完成: ${diff>0?'盘盈+':'盘亏'}${Math.abs(diff)}`,diff>0?'s':'w');
   $('stAct').value='';$('stRmk').value='';showStkSys();
   openStocktaking(); // Refresh
+}
+
+// ===================== BATCH INIT (批量初始入库) =====================
+function openBatchInit(){
+  openSub('批量初始入库',container=>{
+    const ep=db.products.filter(p=>p.enabled);
+    const lumber=ep.filter(p=>p.cat==='木方');
+    const board=ep.filter(p=>p.cat==='模板');
+    const totalStock=ep.reduce((s,p)=>s+getStock(p.id),0);
+
+    let h=`<div style="background:var(--pri-l);border-radius:var(--r);padding:14px;margin-bottom:16px;font-size:14px;color:var(--pri-d)">
+      <strong>使用说明：</strong>把每种材料的实际库存数量填进去，点"确认入库"即可一次性完成初始化。库存为0的不用填。
+    </div>`;
+
+    if(totalStock>0){
+      h+=`<div style="background:var(--wrn-l);border-radius:var(--r);padding:14px;margin-bottom:16px;font-size:14px;color:var(--wrn)">
+        ⚠️ 当前已有库存 ${fmtN(totalStock)}，重复入库会叠加。如果之前录错了，建议先去"库存盘点"调整。
+      </div>`;
+    }
+
+    // Date
+    h+=`<div class="fm"><label>入库日期</label><input type="date" class="fc" id="biDate" value="${td()}"></div>`;
+
+    // Lumber section
+    h+=`<div style="font-size:15px;font-weight:700;padding:10px 0 6px;border-bottom:2px solid #F59E0B;margin:16px 0 10px">🪵 木方 (${lumber.length}种)</div>`;
+    h+=`<div style="font-size:12px;color:var(--g500);margin-bottom:8px">单位：根</div>`;
+    lumber.forEach(p=>{
+      const stk=getStock(p.id);
+      h+=`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--g100)">
+        <div style="flex:1;min-width:0"><div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</div>
+          <div style="font-size:12px;color:var(--g500)">${p.dimension} ${p.length||''}</div></div>
+        ${stk>0?`<div style="font-size:12px;color:var(--wrn);white-space:nowrap">现有${stk}</div>`:''}
+        <input type="number" class="fc bi-input" data-pid="${p.id}" min="0" placeholder="0" inputmode="numeric"
+          style="width:90px;text-align:center;flex-shrink:0;padding:8px">
+      </div>`;
+    });
+
+    // Board section
+    h+=`<div style="font-size:15px;font-weight:700;padding:10px 0 6px;border-bottom:2px solid #6366F1;margin:16px 0 10px">📐 模板 (${board.length}种)</div>`;
+    h+=`<div style="font-size:12px;color:var(--g500);margin-bottom:8px">单位：张</div>`;
+    board.forEach(p=>{
+      const stk=getStock(p.id);
+      h+=`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--g100)">
+        <div style="flex:1;min-width:0"><div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</div>
+          <div style="font-size:12px;color:var(--g500)">${p.dimension} ${p.thickness?p.thickness+'cm':''}</div></div>
+        ${stk>0?`<div style="font-size:12px;color:var(--wrn);white-space:nowrap">现有${stk}</div>`:''}
+        <input type="number" class="fc bi-input" data-pid="${p.id}" min="0" placeholder="0" inputmode="numeric"
+          style="width:90px;text-align:center;flex-shrink:0;padding:8px">
+      </div>`;
+    });
+
+    // Submit button
+    h+=`<div style="position:sticky;bottom:0;background:var(--g100);padding:16px 0;margin-top:16px">
+      <button class="btn btn-suc btn-block btn-lg" onclick="submitBatchInit()">✅ 确认批量入库</button>
+    </div>`;
+
+    container.innerHTML=h;
+  });
+}
+
+function submitBatchInit(){
+  const date=$('biDate').value;
+  if(!date){toast('请选择日期','e');return}
+
+  const inputs=document.querySelectorAll('.bi-input');
+  const entries=[];
+  inputs.forEach(inp=>{
+    const qty=parseInt(inp.value);
+    const pid=inp.getAttribute('data-pid');
+    if(qty&&qty>0) entries.push({pid,qty});
+  });
+
+  if(!entries.length){toast('请至少填写一个产品的数量','e');return}
+
+  // Confirm
+  let confirmMsg=`即将入库 ${entries.length} 种产品：\n\n`;
+  entries.forEach(e=>{
+    confirmMsg+=`${pName(e.pid)}: ${fmtN(e.qty)}${pUnit(e.pid)}\n`;
+  });
+  confirmMsg+=`\n确认提交？`;
+
+  if(!confirm(confirmMsg)) return;
+
+  let totalQty=0;
+  entries.forEach(e=>{
+    addRecord({type:'in',date,productId:e.pid,quantity:e.qty,unitPrice:0,totalAmount:0,
+      supplier:'',customerId:'',customerName:'',remark:'[初始入库]'});
+    totalQty+=e.qty;
+  });
+
+  toast(`批量入库成功！${entries.length}种产品，共${fmtN(totalQty)}`,'s');
+  closeSub();
+  switchTab('stock');
 }
 
 // ===================== DATA IMPORT/EXPORT =====================
