@@ -1027,11 +1027,11 @@ function toggleProd(id){const p=db.products.find(x=>x.id===id);if(p){p.enabled=!
 function openAddProduct(){
   let h=`<div class="fm"><label>类别</label>
     <select class="fc" id="apCat" onchange="updateAPOpts()"><option value="木方">木方</option><option value="模板">模板</option></select></div>
-    <div class="fm"><label>材质</label><select class="fc" id="apMat"></select></div>
-    <div class="fm"><label>截面尺寸</label><select class="fc" id="apDim"></select></div>
-    <div class="fm" id="apLenG"><label>长度</label><select class="fc" id="apLen"></select></div>
-    <div class="fm" id="apThG" style="display:none"><label>厚度(cm)</label><select class="fc" id="apTh"></select></div>
-    <div class="fm"><label>单位</label><select class="fc" id="apUnit"><option value="根">根</option><option value="张">张</option></select></div>
+    <div class="fm"><label>材质</label><input class="fc" id="apMat" list="apMatList" placeholder="输入或从列表选择"><datalist id="apMatList"></datalist></div>
+    <div class="fm"><label>截面尺寸</label><input class="fc" id="apDim" list="apDimList" placeholder="如 3.2×6.2"><datalist id="apDimList"></datalist></div>
+    <div class="fm" id="apLenG"><label>长度</label><input class="fc" id="apLen" list="apLenList" placeholder="如 3米"><datalist id="apLenList"></datalist></div>
+    <div class="fm" id="apThG" style="display:none"><label>厚度(cm)</label><input class="fc" id="apTh" list="apThList" placeholder="如 1.2"><datalist id="apThList"></datalist></div>
+    <div class="fm"><label>单位</label><select class="fc" id="apUnit"><option value="根">根</option><option value="张">张</option><option value="件">件</option><option value="捆">捆</option></select></div>
     <button class="btn btn-pri btn-block btn-lg" onclick="doAddProduct()">添加</button>`;
   openSheet('新增产品',h);updateAPOpts();
 }
@@ -1039,25 +1039,33 @@ function openAddProduct(){
 function updateAPOpts(){
   const cat=$('apCat').value;
   if(cat==='木方'){
-    $('apMat').innerHTML=LM.map(m=>`<option>${m}</option>`).join('');
-    $('apDim').innerHTML=LD.map(d=>`<option>${d}</option>`).join('');
+    const allMats=[...new Set([...LM,...db.products.filter(p=>p.cat==='木方').map(p=>p.material).filter(Boolean)])];
+    const allDims=[...new Set([...LD,...db.products.filter(p=>p.cat==='木方').map(p=>p.dimension).filter(Boolean)])];
+    const allLens=[...new Set([...LL,...db.products.filter(p=>p.cat==='木方').map(p=>p.length).filter(Boolean)])];
+    $('apMatList').innerHTML=allMats.map(m=>`<option value="${m}">`).join('');
+    $('apDimList').innerHTML=allDims.map(d=>`<option value="${d}">`).join('');
+    $('apLenList').innerHTML=allLens.map(l=>`<option value="${l}">`).join('');
     $('apLenG').style.display='';$('apThG').style.display='none';
-    $('apLen').innerHTML=LL.map(l=>`<option>${l}</option>`).join('');
     $('apUnit').value='根';
   } else {
-    $('apMat').innerHTML=BM.map(m=>`<option>${m}</option>`).join('');
-    $('apDim').innerHTML=BD.map(d=>`<option>${d}</option>`).join('');
+    const allMats=[...new Set([...BM,...db.products.filter(p=>p.cat==='模板').map(p=>p.material).filter(Boolean)])];
+    const allDims=[...new Set([...BD,...db.products.filter(p=>p.cat==='模板').map(p=>p.dimension).filter(Boolean)])];
+    const allThick=[...new Set([...BT,...db.products.filter(p=>p.cat==='模板').map(p=>p.thickness).filter(Boolean)])];
+    $('apMatList').innerHTML=allMats.map(m=>`<option value="${m}">`).join('');
+    $('apDimList').innerHTML=allDims.map(d=>`<option value="${d}">`).join('');
+    $('apThList').innerHTML=allThick.map(t=>`<option value="${t}">`).join('');
     $('apLenG').style.display='none';$('apThG').style.display='';
-    $('apTh').innerHTML=BT.map(t=>`<option>${t}</option>`).join('');
     $('apUnit').value='张';
   }
 }
 
 function doAddProduct(){
-  const cat=$('apCat').value,mat=$('apMat').value,dim=$('apDim').value,unit=$('apUnit').value;
+  const cat=$('apCat').value,mat=$('apMat').value.trim(),dim=$('apDim').value.trim(),unit=$('apUnit').value;
+  if(!mat){toast('请输入材质','e');return}
+  if(!dim){toast('请输入截面尺寸','e');return}
   let name,extra={};
-  if(cat==='木方'){const len=$('apLen').value;name=`${mat} ${dim} ${len}`;extra.length=len}
-  else{const th=$('apTh').value;name=`${mat} ${dim} ${th}cm`;extra.thickness=th}
+  if(cat==='木方'){const len=$('apLen').value.trim();if(!len){toast('请输入长度','e');return}name=`${mat} ${dim} ${len}`;extra.length=len}
+  else{const th=$('apTh').value.trim();if(!th){toast('请输入厚度','e');return}name=`${mat} ${dim} ${th}cm`;extra.thickness=th}
   if(db.products.some(p=>p.name===name&&p.cat===cat)){toast('产品已存在','w');return}
   const mx=db.products.reduce((m,p)=>Math.max(m,parseInt(p.id.slice(1))||0),0);
   db.products.push({id:'P'+String(mx+1).padStart(3,'0'),cat,name,material:mat,dimension:dim,unit,enabled:true,createdAt:Date.now(),...extra});
