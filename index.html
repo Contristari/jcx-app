@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#3B82F6">
+<title>建材管家</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root{
+  --pri:#3B82F6;--pri-d:#2563EB;--pri-l:#DBEAFE;
+  --suc:#22C55E;--suc-l:#DCFCE7;
+  --wrn:#F97316;--wrn-l:#FFF7ED;
+  --dan:#EF4444;--dan-l:#FEF2F2;
+  --g50:#F9FAFB;--g100:#F3F4F6;--g200:#E5E7EB;--g300:#D1D5DB;
+  --g400:#9CA3AF;--g500:#6B7280;--g600:#4B5563;--g700:#374151;--g800:#1F2937;--g900:#111827;
+  --r:10px;--safe-b:env(safe-area-inset-bottom,0px);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  background:var(--g100);color:var(--g800);font-size:15px;overflow:hidden;height:100vh;
+  -webkit-tap-highlight-color:transparent;user-select:none}
+input,select,textarea{font-family:inherit;font-size:inherit;user-select:text}
+button{font-family:inherit;font-size:inherit;cursor:pointer;border:none;background:none}
+
+/* ===== App Shell ===== */
+.app{display:flex;flex-direction:column;height:100vh;height:100dvh}
+.hdr{background:var(--pri);color:#fff;padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top,0px));
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;min-height:52px}
+.hdr h1{font-size:18px;font-weight:700;flex:1}
+.hdr-btn{width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:20px}
+.hdr-btn:active{background:rgba(255,255,255,.2)}
+.hdr-sub{font-size:12px;opacity:.8}
+.main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:64px}
+.tab-bar{position:fixed;bottom:0;left:0;right:0;background:#fff;display:flex;
+  border-top:1px solid var(--g200);padding-bottom:var(--safe-b);z-index:100;
+  box-shadow:0 -2px 10px rgba(0,0,0,.06)}
+.tab-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 0 6px;
+  color:var(--g400);font-size:11px;gap:2px;transition:color .15s}
+.tab-item.active{color:var(--pri)}
+.tab-item .ti{font-size:22px;line-height:1}
+.tab-item:active{opacity:.7}
+.tab-badge{position:absolute;top:4px;right:50%;margin-right:-18px;background:var(--dan);
+  color:#fff;font-size:10px;min-width:16px;height:16px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;padding:0 4px}
+
+/* ===== Page ===== */
+.pg{display:none;padding:16px}.pg.active{display:block}
+.pg-title{font-size:17px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+
+/* ===== Cards ===== */
+.cd{background:#fff;border-radius:var(--r);margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.cd-h{padding:14px 16px;border-bottom:1px solid var(--g100);display:flex;align-items:center;justify-content:space-between}
+.cd-h h3{font-size:15px;font-weight:600}
+.cd-b{padding:16px}
+
+/* ===== Stats Grid ===== */
+.st-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.st-card{background:#fff;border-radius:var(--r);padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.st-card .lb{font-size:12px;color:var(--g500)}
+.st-card .vl{font-size:24px;font-weight:700;margin-top:2px}
+.st-card .sb{font-size:11px;color:var(--g400);margin-top:2px}
+.st-card.c-g .vl{color:var(--suc)}.st-card.c-o .vl{color:var(--wrn)}
+.st-card.c-b .vl{color:var(--pri)}.st-card.c-r .vl{color:var(--dan)}
+
+/* ===== Lists ===== */
+.lst-item{display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--g100);gap:12px}
+.lst-item:last-child{border-bottom:none}
+.lst-item:active{background:var(--g50)}
+.lst-ic{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.lst-info{flex:1;min-width:0}
+.lst-info .nm{font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lst-info .ds{font-size:13px;color:var(--g500);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lst-right{text-align:right;flex-shrink:0}
+.lst-right .vl{font-weight:700;font-size:15px}
+.lst-right .sb{font-size:12px;color:var(--g500)}
+
+/* ===== Forms ===== */
+.fm{margin-bottom:14px}
+.fm label{display:block;font-size:13px;color:var(--g600);font-weight:600;margin-bottom:6px}
+.fc{width:100%;padding:12px 14px;border:1.5px solid var(--g200);border-radius:8px;outline:none;
+  background:#fff;font-size:15px;transition:border .15s;-webkit-appearance:none}
+.fc:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+.fc[readonly]{background:var(--g50);color:var(--g500)}
+select.fc{appearance:auto}
+textarea.fc{resize:vertical;min-height:60px}
+.fm-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* ===== Buttons ===== */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 20px;
+  border-radius:8px;font-weight:600;font-size:15px;transition:all .15s;border:none}
+.btn:active{transform:scale(.97)}
+.btn-pri{background:var(--pri);color:#fff}.btn-pri:active{background:var(--pri-d)}
+.btn-suc{background:var(--suc);color:#fff}.btn-suc:active{background:#16A34A}
+.btn-wrn{background:var(--wrn);color:#fff}.btn-wrn:active{background:#EA580C}
+.btn-dan{background:var(--dan);color:#fff}.btn-dan:active{background:#DC2626}
+.btn-gh{background:var(--g100);color:var(--g700)}.btn-gh:active{background:var(--g200)}
+.btn-block{width:100%}
+.btn-lg{padding:14px 24px;font-size:16px}
+.btn-sm{padding:8px 14px;font-size:13px}
+
+/* ===== Toggle ===== */
+.tg{display:flex;background:var(--g100);border-radius:10px;padding:3px;margin-bottom:16px}
+.tg-item{flex:1;padding:10px;text-align:center;border-radius:8px;font-weight:600;font-size:14px;
+  color:var(--g500);transition:all .2s}
+.tg-item.active{background:#fff;color:var(--pri);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+
+/* ===== Badge ===== */
+.bg{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600}
+.bg-g{background:var(--suc-l);color:var(--suc)}.bg-o{background:var(--wrn-l);color:var(--wrn)}
+.bg-r{background:var(--dan-l);color:var(--dan)}.bg-b{background:var(--pri-l);color:var(--pri)}
+.bg-gr{background:var(--g100);color:var(--g600)}
+
+/* ===== Bottom Sheet ===== */
+.sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;opacity:0;
+  pointer-events:none;transition:opacity .3s}
+.sheet-overlay.show{opacity:1;pointer-events:auto}
+.sheet{position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:16px 16px 0 0;
+  z-index:201;transform:translateY(100%);transition:transform .3s ease;
+  max-height:90vh;display:flex;flex-direction:column;padding-bottom:var(--safe-b)}
+.sheet.show{transform:translateY(0)}
+.sheet-handle{width:40px;height:4px;background:var(--g300);border-radius:2px;margin:10px auto}
+.sheet-hd{padding:4px 16px 14px;display:flex;align-items:center;justify-content:space-between}
+.sheet-hd h3{font-size:17px;font-weight:700}
+.sheet-close{width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+  border-radius:50%;background:var(--g100);font-size:18px;color:var(--g500)}
+.sheet-bd{padding:0 16px 20px;overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch}
+
+/* ===== Table (for reports) ===== */
+.tb-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--g100);white-space:nowrap}
+th{background:var(--g50);font-weight:600;color:var(--g600);position:sticky;top:0}
+.tr{text-align:right}
+
+/* ===== Search ===== */
+.srch{display:flex;gap:8px;margin-bottom:12px}
+.srch input{flex:1;padding:10px 14px;border:1.5px solid var(--g200);border-radius:8px;outline:none;font-size:14px}
+.srch input:focus{border-color:var(--pri)}
+
+/* ===== Empty ===== */
+.empty{text-align:center;padding:40px 20px;color:var(--g400)}
+.empty .ic{font-size:48px;margin-bottom:8px}
+.empty p{font-size:14px}
+
+/* ===== Toast ===== */
+.toast-c{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:300;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+.toast{padding:10px 20px;border-radius:20px;color:#fff;font-weight:600;font-size:14px;
+  box-shadow:0 4px 12px rgba(0,0,0,.15);animation:tIn .3s ease;white-space:nowrap;pointer-events:auto}
+.toast-s{background:var(--suc)}.toast-e{background:var(--dan)}
+.toast-i{background:var(--pri)}.toast-w{background:var(--wrn)}
+@keyframes tIn{from{transform:translateY(-20px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* ===== Confirm ===== */
+.cfm{text-align:center;padding:24px 16px}
+.cfm .ic{font-size:48px;margin-bottom:12px}
+.cfm p{font-size:15px;color:var(--g600);margin-bottom:20px}
+.cfm .acts{display:flex;gap:10px;justify-content:center}
+
+/* ===== Product Picker ===== */
+.pk-cats{display:flex;gap:8px;margin-bottom:12px}
+.pk-cat{padding:8px 16px;border-radius:20px;font-size:13px;font-weight:600;background:var(--g100);color:var(--g600)}
+.pk-cat.active{background:var(--pri);color:#fff}
+.pk-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pk-item{padding:12px;border:1.5px solid var(--g200);border-radius:8px;text-align:center;font-size:13px;font-weight:500}
+.pk-item:active{border-color:var(--pri);background:var(--pri-l)}
+.pk-item .nm{font-weight:600;margin-bottom:2px}
+.pk-item .ds{color:var(--g500);font-size:12px}
+
+/* ===== Receipt ===== */
+.receipt{background:#fff;padding:20px;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;max-width:320px;margin:0 auto}
+.receipt .center{text-align:center}.receipt .right{text-align:right}
+.receipt .line{border-top:1px dashed #333;margin:8px 0}
+.receipt h2{font-size:16px;margin-bottom:4px}
+
+/* ===== Sub-page nav ===== */
+.sub-nav{display:flex;align-items:center;padding:12px 16px;
+  padding-top:calc(12px + env(safe-area-inset-top,0px));background:var(--pri);color:#fff}
+.sub-nav .bk{width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:20px;border-radius:8px}
+.sub-nav .bk:active{background:rgba(255,255,255,.2)}
+.sub-nav h2{flex:1;font-size:17px;font-weight:700}
+
+/* ===== Customer Card ===== */
+.cust-card{background:#fff;border-radius:var(--r);padding:16px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.cust-card .nm{font-size:16px;font-weight:700}
+.cust-card .info{font-size:13px;color:var(--g500);margin-top:4px}
+.cust-card .row{display:flex;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid var(--g100)}
+.cust-card .row .it{text-align:center;flex:1}
+.cust-card .row .it .v{font-size:18px;font-weight:700}
+.cust-card .row .it .l{font-size:11px;color:var(--g500)}
+
+/* ===== Install Banner ===== */
+.install-bar{background:var(--pri-l);padding:12px 16px;display:flex;align-items:center;gap:10px;
+  border-bottom:1px solid var(--pri)}
+.install-bar .txt{flex:1;font-size:13px;color:var(--pri-d);font-weight:500}
+.install-bar .btn{padding:6px 14px;font-size:13px}
+
+/* ===== Media Queries ===== */
+@media(min-width:768px){
+  .app{max-width:480px;margin:0 auto;box-shadow:0 0 20px rgba(0,0,0,.1);position:relative}
+  .tab-bar{max-width:480px;left:50%;transform:translateX(-50%)}
+  .sheet{max-width:480px;left:50%;transform:translateX(-50%) translateY(100%)}
+  .sheet.show{transform:translateX(-50%) translateY(0)}
+  .toast-c{top:80px}
+}
+
+/* ===== Print ===== */
+@media print{
+  .hdr,.tab-bar,.sub-nav,.btn,.sheet-handle{display:none!important}
+  .main{overflow:visible;padding:0}
+  .pg{padding:0}
+  body{overflow:visible;height:auto}
+  .app{height:auto}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <!-- Header -->
+  <div class="hdr" id="appHdr">
+    <h1 id="hdrTitle">建材管家</h1>
+    <div id="hdrActs"></div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main" id="mainArea">
+    <!-- Dashboard -->
+    <div class="pg active" id="pg-dash"></div>
+    <!-- Stock -->
+    <div class="pg" id="pg-stock"></div>
+    <!-- Order -->
+    <div class="pg" id="pg-order"></div>
+    <!-- Customers -->
+    <div class="pg" id="pg-cust"></div>
+    <!-- Me -->
+    <div class="pg" id="pg-me"></div>
+    <!-- Sub pages -->
+    <div class="pg" id="pg-sub"></div>
+  </div>
+
+  <!-- Tab Bar -->
+  <div class="tab-bar" id="tabBar">
+    <div class="tab-item active" onclick="switchTab('dash')">
+      <span class="ti">📊</span><span>工作台</span>
+    </div>
+    <div class="tab-item" onclick="switchTab('stock')">
+      <span class="ti">📦</span><span>库存</span>
+    </div>
+    <div class="tab-item" onclick="switchTab('order')">
+      <span class="ti">📝</span><span>开单</span>
+    </div>
+    <div class="tab-item" onclick="switchTab('cust')">
+      <span class="ti">👥</span><span>客户</span>
+    </div>
+    <div class="tab-item" onclick="switchTab('me')">
+      <span class="ti">⚙️</span><span>我的</span>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Sheet -->
+<div class="sheet-overlay" id="sheetOv" onclick="closeSheet()"></div>
+<div class="sheet" id="sheetEl">
+  <div class="sheet-handle"></div>
+  <div class="sheet-hd"><h3 id="sheetTitle">标题</h3><button class="sheet-close" onclick="closeSheet()">✕</button></div>
+  <div class="sheet-bd" id="sheetBody"></div>
+</div>
+
+<!-- Toast -->
+<div class="toast-c" id="toasts"></div>
+
+<script>
+// ===================== CONSTANTS =====================
+const SK='jcx_v2';const PS=15;const LOW=50;
+const LM=['进口俄材','国产马尾松'],LD=['3.2×6.2','3.4×6.4','3.7×6.7','3.8×6.8'],LL=['3米','4米'];
+const BM=['红板','覆膜黑板','竹胶板'],BD=['1.22×2.44','1.83×0.915'],BT=['1.0','1.2','1.3','1.4','1.5'];
+
+// ===================== STATE =====================
+let db={products:[],records:[],customers:[]};
+let curTab='dash',subStack=[];
+let deferredInstall=null;
+
+// ===================== UTILITIES =====================
+const $=id=>document.getElementById(id);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).substr(2,6);
+const td=()=>{const d=new Date();return d.getFullYear()+'-'+S(d.getMonth()+1)+'-'+S(d.getDate())};
+const S=n=>String(n).padStart(2,'0');
+const fmtD=ts=>{if(!ts)return'-';const d=new Date(ts);return d.getFullYear()+'-'+S(d.getMonth()+1)+'-'+S(d.getDate())};
+const fmtN=n=>n.toLocaleString('zh-CN');
+const fmtM=n=>n?'¥'+n.toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2}):'-';
+
+function toast(msg,type='i'){
+  const el=document.createElement('div');
+  el.className='toast toast-'+type;el.textContent=msg;
+  $('toasts').appendChild(el);setTimeout(()=>el.remove(),2500);
+}
+
+// ===================== DATA LAYER =====================
+function load(){
+  try{const r=localStorage.getItem(SK);if(r)db=JSON.parse(r);else throw 0}catch(e){db={products:[],records:[],customers:[]}}
+  if(!db.products||!db.products.length)initProducts();
+  if(!db.records)db.records=[];
+  if(!db.customers)db.customers=[];
+}
+function save(){localStorage.setItem(SK,JSON.stringify(db))}
+
+function initProducts(){
+  let id=1;
+  LM.forEach(m=>LD.forEach(d=>LL.forEach(l=>{
+    db.products.push({id:'P'+String(id++).padStart(3,'0'),cat:'木方',name:`${m} ${d} ${l}`,
+      material:m,dimension:d,length:l,unit:'根',enabled:true,createdAt:Date.now()});
+  })));
+  BM.forEach(m=>BD.forEach(d=>BT.forEach(t=>{
+    db.products.push({id:'P'+String(id++).padStart(3,'0'),cat:'模板',name:`${m} ${d} ${t}cm`,
+      material:m,dimension:d,thickness:t,unit:'张',enabled:true,createdAt:Date.now()});
+  })));
+  save();
+}
+
+function getStock(pid){
+  let s=0;db.records.forEach(r=>{if(r.productId!==pid)return;
+    if(r.type==='in'||r.type==='adj_plus')s+=r.quantity;
+    else if(r.type==='out'||r.type==='adjust_minus')s-=r.quantity;
+  });return Math.max(0,s);
+}
+
+function getStockDetail(pid){
+  let i=0,o=0,ap=0,am=0;
+  db.records.forEach(r=>{if(r.productId!==pid)return;
+    if(r.type==='in')i+=r.quantity;else if(r.type==='out')o+=r.quantity;
+    else if(r.type==='adj_plus')ap+=r.quantity;else if(r.type==='adjust_minus')am+=r.quantity;
+  });return{inT:i,outT:o,adjP:ap,adjM:am,stock:i+ap-o-am};
+}
+
+function addRecord(rec){rec.id=uid();rec.createdAt=Date.now();db.records.push(rec);save();return rec}
+function delRecord(rid){db.records=db.records.filter(r=>r.id!==rid);save()}
+function pName(id){const p=db.products.find(x=>x.id===id);return p?p.name:'未知'}
+function pUnit(id){const p=db.products.find(x=>x.id===id);return p?p.unit:''}
+function getCustReceivable(cid){
+  let total=0,paid=0;
+  db.records.filter(r=>r.type==='out'&&r.customerId===cid).forEach(r=>total+=(r.totalAmount||0));
+  db.records.filter(r=>r.type==='payment'&&r.customerId===cid).forEach(r=>paid+=(r.amount||0));
+  return{total,paid,balance:total-paid};
+}
+
+// ===================== NAVIGATION =====================
+const tabNames={dash:'建材管家',stock:'库存查询',order:'开单',cust:'客户管理',me:'我的'};
+
+function switchTab(tab){
+  curTab=tab;subStack=[];
+  document.querySelectorAll('.tab-item').forEach((el,i)=>{
+    el.classList.toggle('active',['dash','stock','order','cust','me'][i]===tab);
+  });
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('active'));
+  $('pg-'+tab).classList.add('active');
+  $('hdrTitle').textContent=tabNames[tab];
+  $('hdrActs').innerHTML='';
+  $('appHdr').style.display='';
+  $('tabBar').style.display='';
+  renderTab(tab);
+}
+
+function renderTab(tab){
+  switch(tab){
+    case'dash':renderDash();break;case'stock':renderStock();break;
+    case'order':renderOrder();break;case'cust':renderCust();break;
+    case'me':renderMe();break;
+  }
+}
+
+// Sub-page navigation
+function openSub(title,renderFn){
+  subStack.push({tab:curTab,title,renderFn});
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('active'));
+  $('pg-sub').classList.add('active');
+  $('appHdr').style.display='none';
+  $('tabBar').style.display='none';
+  $('pg-sub').innerHTML=`<div class="sub-nav"><button class="bk" onclick="closeSub()">←</button><h2>${title}</h2></div><div id="subContent" style="padding:16px"></div>`;
+  renderFn($('subContent'));
+}
+
+function closeSub(){
+  const prev=subStack.pop();
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('active'));
+  $('pg-'+(prev?prev.tab:curTab)).classList.add('active');
+  $('appHdr').style.display='';$('tabBar').style.display='';
+  $('hdrTitle').textContent=tabNames[prev?prev.tab:curTab];
+  renderTab(prev?prev.tab:curTab);
+}
+
+// ===================== BOTTOM SHEET =====================
+function openSheet(title,html){
+  $('sheetTitle').textContent=title;$('sheetBody').innerHTML=html;
+  $('sheetOv').classList.add('show');$('sheetEl').classList.add('show');
+}
+function closeSheet(){$('sheetOv').classList.remove('show');$('sheetEl').classList.remove('show')}
+
+// ===================== DASHBOARD =====================
+function renderDash(){
+  const ep=db.products.filter(p=>p.enabled);
+  let totalStk=0,lowCt=0;ep.forEach(p=>{const s=getStock(p.id);totalStk+=s;if(s<LOW)lowCt++});
+  const tStr=td();let tIn=0,tOut=0;
+  db.records.forEach(r=>{if(r.date===tStr){if(r.type==='in')tIn++;else if(r.type==='out')tOut++}});
+  const totalRecv=db.customers.reduce((s,c)=>s+getCustReceivable(c.id).balance,0);
+
+  let h=`<div class="st-grid">
+    <div class="st-card c-b"><div class="lb">产品总数</div><div class="vl">${ep.length}</div><div class="sb">种材料在管</div></div>
+    <div class="st-card c-g"><div class="lb">总库存</div><div class="vl">${fmtN(totalStk)}</div><div class="sb">根/张</div></div>
+    <div class="st-card c-o"><div class="lb">今日入/出</div><div class="vl">${tIn} / ${tOut}</div><div class="sb">笔</div></div>
+    <div class="st-card c-r"><div class="lb">应收款</div><div class="vl">${totalRecv>0?fmtM(totalRecv):'¥0'}</div><div class="sb">${lowCt}个产品库存偏低</div></div>
+  </div>`;
+
+  // Recent records
+  const recent=db.records.filter(r=>r.type==='in'||r.type==='out').sort((a,b)=>b.createdAt-a.createdAt).slice(0,10);
+  h+=`<div class="cd"><div class="cd-h"><h3>最近动态</h3></div><div class="cd-b" style="padding:0">`;
+  if(!recent.length) h+=`<div class="empty"><p>暂无记录，去"开单"添加吧</p></div>`;
+  else recent.forEach(r=>{
+    const isIn=r.type==='in';
+    h+=`<div class="lst-item">
+      <div class="lst-ic" style="background:${isIn?'var(--suc-l)':'var(--wrn-l)'}">${isIn?'📥':'📤'}</div>
+      <div class="lst-info"><div class="nm">${pName(r.productId)}</div>
+        <div class="ds">${isIn?'入库':'出库'} · ${r.date}${isIn&&r.supplier?' · '+r.supplier:''}${!isIn&&r.customerName?' · '+r.customerName:''}</div></div>
+      <div class="lst-right"><div class="vl" style="color:${isIn?'var(--suc)':'var(--wrn)'}">${isIn?'+':'-'}${fmtN(r.quantity)}</div>
+        <div class="sb">${pUnit(r.productId)}</div></div>
+    </div>`;
+  });
+  h+=`</div></div>`;
+
+  // Low stock alerts
+  const alerts=ep.map(p=>({...p,stock:getStock(p.id)})).filter(p=>p.stock<LOW).sort((a,b)=>a.stock-b.stock).slice(0,5);
+  if(alerts.length){
+    h+=`<div class="cd"><div class="cd-h"><h3>⚠️ 库存预警</h3></div><div class="cd-b" style="padding:0">`;
+    alerts.forEach(p=>{
+      h+=`<div class="lst-item"><div class="lst-ic" style="background:var(--dan-l)">⚠️</div>
+        <div class="lst-info"><div class="nm">${p.name}</div><div class="ds">${p.cat}</div></div>
+        <div class="lst-right"><div class="vl" style="color:${p.stock===0?'var(--dan)':'var(--wrn)'}">${fmtN(p.stock)}</div>
+        <div class="sb">${p.unit} ${p.stock===0?'缺货':'偏低'}</div></div></div>`;
+    });
+    h+=`</div></div>`;
+  }
+  $('pg-dash').innerHTML=h;
+}
+
+// ===================== STOCK =====================
+function renderStock(){
+  let h=`<div class="srch"><input placeholder="搜索产品..." id="stkS" oninput="renderStockList()"></div>
+    <div class="pk-cats" style="margin-bottom:12px">
+      <button class="pk-cat active" onclick="stkFilter('',this)">全部</button>
+      <button class="pk-cat" onclick="stkFilter('木方',this)">木方</button>
+      <button class="pk-cat" onclick="stkFilter('模板',this)">模板</button>
+    </div><div id="stkList"></div>`;
+  $('pg-stock').innerHTML=h;
+  renderStockList();
+}
+
+let stkCat='';
+function stkFilter(cat,el){
+  stkCat=cat;
+  el.parentElement.querySelectorAll('.pk-cat').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  renderStockList();
+}
+
+function renderStockList(){
+  const s=($('stkS')||{}).value||'';
+  const prods=db.products.filter(p=>{
+    if(!p.enabled)return false;
+    if(stkCat&&p.cat!==stkCat)return false;
+    if(s&&!p.name.toLowerCase().includes(s.toLowerCase()))return false;
+    return true;
+  });
+  if(!prods.length){$('stkList').innerHTML='<div class="empty"><p>没有匹配的产品</p></div>';return}
+
+  let h='';
+  ['木方','模板'].forEach(cat=>{
+    const items=prods.filter(p=>p.cat===cat).sort((a,b)=>a.name.localeCompare(b.name));
+    if(!items.length)return;
+    const catStk=items.reduce((s,p)=>s+getStock(p.id),0);
+    h+=`<div style="font-size:14px;font-weight:700;padding:10px 0 6px;border-bottom:2px solid var(--pri);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
+      <span>${cat==='木方'?'🪵 木方':'📐 模板'}</span><span style="font-size:12px;color:var(--g500);font-weight:400">合计 ${fmtN(catStk)}</span></div>`;
+    items.forEach(p=>{
+      const d=getStockDetail(p.id);
+      const badge=p.stock===0?'<span class="bg bg-r">缺货</span>':p.stock<LOW?'<span class="bg bg-o">偏低</span>':'<span class="bg bg-g">正常</span>';
+      h+=`<div class="lst-item" onclick="showStockDetail('${p.id}')">
+        <div class="lst-ic" style="background:${cat==='木方'?'#FEF3C7':'#E0E7FF'}">${cat==='木方'?'🪵':'📐'}</div>
+        <div class="lst-info"><div class="nm">${p.name}</div>
+          <div class="ds">${p.dimension||''}${p.length?' '+p.length:''}${p.thickness?' '+p.thickness+'cm':''}</div></div>
+        <div class="lst-right"><div class="vl">${fmtN(d.stock)} ${p.unit}</div><div class="sb">${badge}</div></div>
+      </div>`;
+    });
+  });
+  $('stkList').innerHTML=h;
+}
+
+function showStockDetail(pid){
+  const p=db.products.find(x=>x.id===pid);if(!p)return;
+  const d=getStockDetail(pid);
+  const recent=db.records.filter(r=>r.productId===pid).sort((a,b)=>b.createdAt-a.createdAt).slice(0,10);
+  let h=`<div style="text-align:center;margin-bottom:16px">
+    <div style="font-size:36px;font-weight:700;color:var(--pri)">${fmtN(d.stock)}</div>
+    <div style="color:var(--g500);font-size:14px">${p.unit} · ${p.name}</div></div>
+    <div class="st-grid">
+      <div class="st-card c-g"><div class="lb">总入库</div><div class="vl">${fmtN(d.inT)}</div></div>
+      <div class="st-card c-r"><div class="lb">总出库</div><div class="vl">${fmtN(d.outT)}</div></div>
+      <div class="st-card c-b"><div class="lb">盘盈</div><div class="vl">${d.adjP||'-'}</div></div>
+      <div class="st-card c-o"><div class="lb">盘亏</div><div class="vl">${d.adjM||'-'}</div></div>
+    </div>`;
+  if(recent.length){
+    h+=`<div style="font-weight:600;margin:12px 0 8px">最近记录</div>`;
+    recent.forEach(r=>{
+      const label={in:'入库',out:'出库',adjust_plus:'盘盈',adjust_minus:'盘亏',payment:'收款'}[r.type]||r.type;
+      const color=r.type==='in'||r.type==='adjust_plus'?'var(--suc)':'var(--wrn)';
+      const sign=r.type==='in'||r.type==='adjust_plus'?'+':'-';
+      h+=`<div class="lst-item"><div class="lst-info"><div class="nm">${label}</div><div class="ds">${r.date}${r.remark?' · '+r.remark:''}</div></div>
+        <div class="lst-right"><div class="vl" style="color:${color}">${sign}${fmtN(r.quantity)}</div></div></div>`;
+    });
+  }
+  openSheet('库存详情',h);
+}
+
+// ===================== ORDER (开单) =====================
+let orderType='in'; // 'in' or 'out'
+let orderProduct='';
+
+function renderOrder(){
+  const today=td();
+  let h=`<div class="tg">
+    <div class="tg-item ${orderType==='in'?'active':''}" onclick="setOrderType('in')">📥 入库</div>
+    <div class="tg-item ${orderType==='out'?'active':''}" onclick="setOrderType('out')">📤 出库</div>
+  </div>`;
+
+  // Product selector
+  h+=`<div class="cd"><div class="cd-b">
+    <div class="fm"><label>选择产品</label>
+      <div id="orderProdSel" onclick="openProductPicker()" style="padding:12px 14px;border:1.5px solid var(--g200);border-radius:8px;display:flex;align-items:center;justify-content:space-between;min-height:48px">
+        <span id="orderProdName" style="color:${orderProduct?'var(--g800)':'var(--g400)'}">${orderProduct?pName(orderProduct):'点击选择产品'}</span>
+        <span style="color:var(--g400)">›</span>
+      </div>
+    </div>`;
+
+  if(orderProduct){
+    const stk=getStock(orderProduct);
+    h+=`<div style="display:flex;gap:12px;margin-bottom:12px">
+      <div class="bg ${stk<LOW?'bg-o':'bg-g'}" style="padding:6px 12px;font-size:13px">库存: ${fmtN(stk)} ${pUnit(orderProduct)}</div>
+    </div>`;
+  }
+
+  h+=`<div class="fm"><label>日期</label><input type="date" class="fc" id="ordDate" value="${today}"></div>
+    <div class="fm-row">
+      <div class="fm"><label>数量（${orderProduct?pUnit(orderProduct):'根/张'}）</label>
+        <input type="number" class="fc" id="ordQty" min="1" placeholder="输入数量" inputmode="numeric"></div>
+      <div class="fm"><label>单价（元）</label>
+        <input type="number" class="fc" id="ordPrice" min="0" step="0.01" placeholder="可选" inputmode="decimal"></div>
+    </div>`;
+
+  if(orderType==='in'){
+    h+=`<div class="fm"><label>供应商</label>
+      <input type="text" class="fc" id="ordSupplier" placeholder="供应商名称" list="supplierList"></div>
+      <datalist id="supplierList">${[...new Set(db.records.filter(r=>r.supplier).map(r=>r.supplier))].map(s=>`<option value="${s}">`).join('')}</datalist>`;
+  } else {
+    h+=`<div class="fm"><label>客户/工地</label>
+      <select class="fc" id="ordCust"><option value="">-- 选择客户 --</option>
+        ${db.customers.map(c=>`<option value="${c.id}">${c.name}${c.phone?' '+c.phone:''}</option>`).join('')}
+      </select></div>`;
+  }
+
+  h+=`<div class="fm"><label>备注</label><input type="text" class="fc" id="ordRemark" placeholder="可选"></div>
+    <button class="btn ${orderType==='in'?'btn-suc':'btn-wrn'} btn-block btn-lg" onclick="submitOrder()" style="margin-top:8px">
+      ${orderType==='in'?'✅ 确认入库':'📤 确认出库'}</button>
+  </div></div>`;
+
+  // Recent records
+  const recs=db.records.filter(r=>r.type==='in'||r.type==='out').sort((a,b)=>b.createdAt-a.createdAt).slice(0,8);
+  h+=`<div class="cd"><div class="cd-h"><h3>最近单据</h3></div><div class="cd-b" style="padding:0">`;
+  if(!recs.length) h+=`<div class="empty"><p>暂无单据</p></div>`;
+  else recs.forEach(r=>{
+    const isIn=r.type==='in';
+    h+=`<div class="lst-item" onclick="showOrderDetail('${r.id}')">
+      <div class="lst-ic" style="background:${isIn?'var(--suc-l)':'var(--wrn-l)'}">${isIn?'📥':'📤'}</div>
+      <div class="lst-info"><div class="nm">${pName(r.productId)}</div>
+        <div class="ds">${r.date} · ${fmtN(r.quantity)}${pUnit(r.productId)}${r.totalAmount?' · '+fmtM(r.totalAmount):''}</div></div>
+      <div class="lst-right"><div class="sb">${isIn?'入库':'出库'}</div></div>
+    </div>`;
+  });
+  h+=`</div></div>`;
+  $('pg-order').innerHTML=h;
+}
+
+function setOrderType(t){orderType=t;renderOrder()}
+
+function openProductPicker(){
+  let h=`<div class="pk-cats">
+    <button class="pk-cat active" onclick="pickCat('木方',this)">🪵 木方</button>
+    <button class="pk-cat" onclick="pickCat('模板',this)">📐 模板</button></div>
+    <div id="pickGrid"></div>`;
+  openSheet('选择产品',h);
+  pickCat('木方');
+}
+
+function pickCat(cat,el){
+  if(el){el.parentElement.querySelectorAll('.pk-cat').forEach(e=>e.classList.remove('active'));el.classList.add('active')}
+  const prods=db.products.filter(p=>p.enabled&&p.cat===cat);
+  let h='<div class="pk-grid">';
+  prods.forEach(p=>{
+    h+=`<div class="pk-item" onclick="selectProduct('${p.id}')">
+      <div class="nm">${p.name}</div>
+      <div class="ds">${p.dimension||''}${p.length?' '+p.length:''}${p.thickness?' '+p.thickness+'cm':''} · 库存${fmtN(getStock(p.id))}</div>
+    </div>`;
+  });
+  h+='</div>';
+  $('pickGrid').innerHTML=h;
+}
+
+function selectProduct(pid){
+  orderProduct=pid;closeSheet();renderOrder();
+}
+
+function submitOrder(){
+  const date=$('ordDate').value;
+  const qty=parseInt($('ordQty').value);
+  const price=parseFloat($('ordPrice').value)||0;
+  const remark=($('ordRemark')||{}).value||'';
+
+  if(!date){toast('请选择日期','e');return}
+  if(!orderProduct){toast('请选择产品','e');return}
+  if(!qty||qty<=0){toast('请输入有效数量','e');return}
+
+  if(orderType==='in'){
+    const supplier=($('ordSupplier')||{}).value||'';
+    addRecord({type:'in',date,productId:orderProduct,quantity:qty,unitPrice:price,totalAmount:qty*price,supplier,customerId:'',customerName:'',remark});
+    toast(`入库成功: ${pName(orderProduct)} × ${fmtN(qty)}`,'s');
+  } else {
+    const stk=getStock(orderProduct);
+    if(qty>stk){toast(`库存不足! 当前${stk}${pUnit(orderProduct)}`,'e');return}
+    const custId=($('ordCust')||{}).value||'';
+    const cust=db.customers.find(c=>c.id===custId);
+    addRecord({type:'out',date,productId:orderProduct,quantity:qty,unitPrice:price,totalAmount:qty*price,
+      supplier:'',customerId:custId,customerName:cust?cust.name:'',remark});
+    toast(`出库成功: ${pName(orderProduct)} × ${fmtN(qty)}`,'s');
+    // Offer delivery note
+    if(cust&&qty*price>0){
+      setTimeout(()=>{
+        openSheet('出库成功',`<div class="cfm"><div class="ic">✅</div>
+          <p>已出库 ${fmtN(qty)} ${pUnit(orderProduct)}<br>金额: ${fmtM(qty*price)}</p>
+          <div class="acts"><button class="btn btn-gh" onclick="closeSheet()">关闭</button>
+            <button class="btn btn-pri" onclick="genDeliveryNote('${db.records[db.records.length-1].id}')">生成送货单</button></div></div>`);
+      },300);
+    }
+  }
+  orderProduct='';renderOrder();
+}
+
+function showOrderDetail(rid){
+  const r=db.records.find(x=>x.id===rid);if(!r)return;
+  const isIn=r.type==='in';
+  let h=`<div style="margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <span class="bg ${isIn?'bg-g':'bg-o'}" style="font-size:14px;padding:4px 12px">${isIn?'入库单':'出库单'}</span>
+      <span style="color:var(--g500);font-size:13px">${r.date}</span></div>
+    <div class="cd"><div class="cd-b">
+      <div class="lst-item" style="padding:8px 0;border:none">
+        <div class="lst-info"><div class="nm">${pName(r.productId)}</div><div class="ds">${pUnit(r.productId)}</div></div>
+        <div class="lst-right"><div class="vl">${fmtN(r.quantity)}</div></div></div>
+      ${r.unitPrice?`<div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--g100)"><span style="color:var(--g500)">单价</span><span>${fmtM(r.unitPrice)}</span></div>`:''}
+      ${r.totalAmount?`<div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--g100)"><span style="color:var(--g500)">金额</span><span style="font-weight:700;font-size:17px">${fmtM(r.totalAmount)}</span></div>`:''}
+      ${isIn&&r.supplier?`<div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--g100)"><span style="color:var(--g500)">供应商</span><span>${r.supplier}</span></div>`:''}
+      ${!isIn&&r.customerName?`<div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--g100)"><span style="color:var(--g500)">客户</span><span>${r.customerName}</span></div>`:''}
+      ${r.remark?`<div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--g100)"><span style="color:var(--g500)">备注</span><span>${r.remark}</span></div>`:''}
+    </div></div>
+    <div style="display:flex;gap:10px;margin-top:12px">
+      ${!isIn&&r.customerName?`<button class="btn btn-pri btn-block" onclick="genDeliveryNote('${r.id}')">🖨️ 送货单</button>`:''}
+      <button class="btn btn-dan btn-block" onclick="confirmDel('${r.id}')">删除</button>
+    </div>
+  </div>`;
+  openSheet('单据详情',h);
+}
+
+function confirmDel(rid){
+  closeSheet();
+  setTimeout(()=>{
+    openSheet('确认删除',`<div class="cfm"><div class="ic">⚠️</div>
+      <p>确定删除这条记录吗？<br><span style="font-size:13px;color:var(--g400)">删除后库存自动重新计算</span></p>
+      <div class="acts"><button class="btn btn-gh" onclick="closeSheet()">取消</button>
+        <button class="btn btn-dan" onclick="doDel('${rid}')">确认删除</button></div></div>`);
+  },350);
+}
+function doDel(rid){delRecord(rid);closeSheet();toast('已删除','i');renderTab(curTab)}
+
+// ===================== DELIVERY NOTE =====================
+function genDeliveryNote(rid){
+  const r=db.records.find(x=>x.id===rid);if(!r)return;
+  const cust=db.customers.find(c=>c.id===r.customerId);
+  // Find all outbound records for this customer on the same date
+  const sameDayOut=db.records.filter(x=>x.type==='out'&&x.customerId===r.customerId&&x.date===r.date);
+  let totalQty=0,totalAmt=0;
+  let items='';
+  sameDayOut.forEach((x,i)=>{
+    totalQty+=x.quantity;totalAmt+=(x.totalAmount||0);
+    items+=`<tr><td>${i+1}</td><td>${pName(x.productId)}</td><td style="text-align:right">${fmtN(x.quantity)}</td>
+      <td style="text-align:right">${x.unitPrice?fmtM(x.unitPrice):'-'}</td>
+      <td style="text-align:right">${x.totalAmount?fmtM(x.totalAmount):'-'}</td></tr>`;
+  });
+
+  const noteHtml=`<div class="receipt" id="receiptPrint">
+    <div class="center"><h2>送 货 单</h2></div>
+    <div class="line"></div>
+    <div>客户: ${cust?cust.name:r.customerName||'-'}</div>
+    <div>电话: ${cust?cust.phone||'-':'-'}</div>
+    <div>日期: ${r.date}</div>
+    <div class="line"></div>
+    <table style="width:100%;font-size:12px;border-collapse:collapse">
+      <thead><tr><th>序</th><th>品名</th><th style="text-align:right">数量</th><th style="text-align:right">单价</th><th style="text-align:right">金额</th></tr></thead>
+      <tbody>${items}</tbody>
+    </table>
+    <div class="line"></div>
+    <div style="display:flex;justify-content:space-between"><span>合计数量: ${fmtN(totalQty)}</span><span>合计金额: ${fmtM(totalAmt)}</span></div>
+    <div class="line"></div>
+    <div style="margin-top:20px;display:flex;justify-content:space-between">
+      <span>送货人: ________</span><span>收货人: ________</span></div>
+    <div class="line"></div>
+    <div class="center" style="font-size:11px;color:#999;margin-top:8px">建材管家 生成</div>
+  </div>`;
+
+  openSheet('送货单',`${noteHtml}
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn btn-pri btn-block" onclick="printReceipt()">🖨️ 打印</button>
+      <button class="btn btn-gh btn-block" onclick="shareReceipt()">📤 分享</button>
+    </div>`);
+}
+
+function printReceipt(){
+  const content=$('receiptPrint');if(!content)return;
+  const w=window.open('','','width=400,height=600');
+  w.document.write(`<html><head><title>送货单</title><style>
+    body{font-family:'Courier New',monospace;font-size:13px;line-height:1.6;padding:20px;max-width:320px;margin:0 auto}
+    .center{text-align:center}.line{border-top:1px dashed #333;margin:8px 0}
+    h2{font-size:16px;margin-bottom:4px}table{width:100%;border-collapse:collapse}
+    th,td{padding:4px;text-align:left;border-bottom:1px solid #ddd}th{font-weight:bold}
+    </style></head><body>${content.innerHTML}</body></html>`);
+  w.document.close();w.print();w.close();
+}
+
+function shareReceipt(){
+  const r=document.querySelector('#sheetBody .receipt');if(!r)return;
+  const text=r.innerText;
+  if(navigator.share){navigator.share({title:'送货单',text}).catch(()=>{})}
+  else{navigator.clipboard.writeText(text).then(()=>toast('已复制到剪贴板','s')).catch(()=>toast('复制失败','e'))}
+}
+
+// ===================== CUSTOMERS =====================
+function renderCust(){
+  let h=`<div style="margin-bottom:12px"><button class="btn btn-pri btn-block" onclick="openAddCust()">+ 新增客户</button></div>`;
+  if(!db.customers.length){
+    h+=`<div class="empty"><div class="ic">👥</div><p>还没有客户<br>点击上方按钮添加</p></div>`;
+  } else {
+    db.customers.sort((a,b)=>{
+      const ra=getCustReceivable(a.id).balance,rb=getCustReceivable(b.id).balance;
+      return rb-ra;
+    }).forEach(c=>{
+      const recv=getCustReceivable(c.id);
+      const txCount=db.records.filter(r=>r.customerId===c.id&&(r.type==='out')).length;
+      h+=`<div class="cust-card" onclick="showCustDetail('${c.id}')">
+        <div class="nm">${c.name}</div>
+        <div class="info">${c.phone||'无电话'}${c.address?' · '+c.address:''}</div>
+        <div class="row">
+          <div class="it"><div class="v">${txCount}</div><div class="l">交易笔数</div></div>
+          <div class="it"><div class="v" style="color:${recv.balance>0?'var(--dan)':'var(--suc)'}">${recv.balance>0?fmtM(recv.balance):'¥0'}</div><div class="l">应收款</div></div>
+        </div></div>`;
+    });
+  }
+  $('pg-cust').innerHTML=h;
+}
+
+function openAddCust(editId){
+  const c=editId?db.customers.find(x=>x.id===editId):null;
+  let h=`<div class="fm"><label>客户名称 *</label><input class="fc" id="cName" value="${c?c.name:''}" placeholder="姓名或公司名"></div>
+    <div class="fm"><label>电话</label><input class="fc" id="cPhone" value="${c?c.phone||'':''}" placeholder="手机号码" inputmode="tel"></div>
+    <div class="fm"><label>地址</label><input class="fc" id="cAddr" value="${c?c.address||'':''}" placeholder="送货地址"></div>
+    <div class="fm"><label>备注</label><input class="fc" id="cNote" value="${c?c.note||'':''}" placeholder="可选"></div>
+    <button class="btn btn-pri btn-block btn-lg" onclick="saveCust('${editId||''}')">${c?'保存修改':'添加客户'}</button>`;
+  if(c) h+=`<button class="btn btn-dan btn-block" style="margin-top:8px" onclick="delCust('${c.id}')">删除客户</button>`;
+  openSheet(c?'编辑客户':'新增客户',h);
+}
+
+function saveCust(editId){
+  const name=$('cName').value.trim();
+  if(!name){toast('请输入客户名称','e');return}
+  const data={name,phone:$('cPhone').value.trim(),address:$('cAddr').value.trim(),note:$('cNote').value.trim()};
+  if(editId){
+    const c=db.customers.find(x=>x.id===editId);
+    if(c)Object.assign(c,data);
+  } else {
+    data.id=uid();data.createdAt=Date.now();
+    db.customers.push(data);
+  }
+  save();closeSheet();renderCust();toast(editId?'已更新':'已添加','s');
+}
+
+function delCust(cid){
+  const hasTx=db.records.some(r=>r.customerId===cid);
+  if(hasTx){toast('该客户有交易记录，无法删除','e');return}
+  db.customers=db.customers.filter(c=>c.id!==cid);save();closeSheet();renderCust();toast('已删除','i');
+}
+
+function showCustDetail(cid){
+  const c=db.customers.find(x=>x.id===cid);if(!c)return;
+  const recv=getCustReceivable(cid);
+  const txs=db.records.filter(r=>r.customerId===cid&&(r.type==='out'||r.type==='payment')).sort((a,b)=>b.createdAt-a.createdAt);
+
+  let h=`<div style="text-align:center;margin-bottom:16px">
+    <div style="font-size:18px;font-weight:700">${c.name}</div>
+    <div style="color:var(--g500);font-size:13px">${c.phone||''} ${c.address?'· '+c.address:''}</div></div>`;
+
+  if(recv.balance>0){
+    h+=`<div class="cd" style="background:var(--dan-l)"><div class="cd-b" style="text-align:center">
+      <div style="font-size:12px;color:var(--dan)">应收款余额</div>
+      <div style="font-size:28px;font-weight:700;color:var(--dan)">${fmtM(recv.balance)}</div>
+      <div style="font-size:12px;color:var(--g500)">累计 ${fmtM(recv.total)} · 已收 ${fmtM(recv.paid)}</div>
+      <button class="btn btn-suc btn-sm" style="margin-top:8px" onclick="openPayment('${cid}')">记录收款</button>
+    </div></div>`;
+  }
+
+  h+=`<div style="display:flex;gap:8px;margin-bottom:12px">
+    <button class="btn btn-gh btn-sm" style="flex:1" onclick="openAddCust('${cid}')">✏️ 编辑</button>
+    <button class="btn btn-gh btn-sm" style="flex:1" onclick="openPayment('${cid}')">💰 收款</button></div>`;
+
+  if(!txs.length){
+    h+=`<div class="empty"><p>暂无交易记录</p></div>`;
+  } else {
+    h+=`<div style="font-weight:600;margin-bottom:8px">交易记录</div>`;
+    txs.forEach(r=>{
+      if(r.type==='payment'){
+        h+=`<div class="lst-item"><div class="lst-ic" style="background:var(--suc-l)">💰</div>
+          <div class="lst-info"><div class="nm">收款</div><div class="ds">${r.date}${r.remark?' · '+r.remark:''}</div></div>
+          <div class="lst-right"><div class="vl" style="color:var(--suc)">+${fmtM(r.amount)}</div></div></div>`;
+      } else {
+        h+=`<div class="lst-item"><div class="lst-ic" style="background:var(--wrn-l)">📤</div>
+          <div class="lst-info"><div class="nm">${pName(r.productId)}</div><div class="ds">${r.date} · ${fmtN(r.quantity)}${pUnit(r.productId)}</div></div>
+          <div class="lst-right"><div class="vl" style="color:var(--wrn)">${r.totalAmount?fmtM(r.totalAmount):'-'}</div></div></div>`;
+      }
+    });
+  }
+  openSheet('客户详情',h);
+}
+
+function openPayment(cid){
+  const c=db.customers.find(x=>x.id===cid);if(!c)return;
+  const recv=getCustReceivable(cid);
+  let h=`<div style="text-align:center;margin-bottom:16px">
+    <div style="font-size:12px;color:var(--g500)">${c.name} 应收款余额</div>
+    <div style="font-size:28px;font-weight:700;color:var(--dan)">${fmtM(recv.balance)}</div></div>
+    <div class="fm"><label>收款金额 *</label>
+      <input type="number" class="fc" id="payAmt" min="0.01" step="0.01" placeholder="输入收款金额" inputmode="decimal"
+        style="font-size:20px;text-align:center;font-weight:700"></div>
+    <div class="fm"><label>收款日期</label><input type="date" class="fc" id="payDate" value="${td()}"></div>
+    <div class="fm"><label>备注</label><input class="fc" id="payNote" placeholder="如：微信转账、银行转账等"></div>
+    <button class="btn btn-suc btn-block btn-lg" onclick="submitPayment('${cid}')">确认收款</button>`;
+  openSheet('记录收款',h);
+}
+
+function submitPayment(cid){
+  const amt=parseFloat($('payAmt').value);
+  const date=$('payDate').value;
+  const note=$('payNote').value.trim();
+  if(!amt||amt<=0){toast('请输入有效金额','e');return}
+  if(!date){toast('请选择日期','e');return}
+  addRecord({type:'payment',date,customerId:cid,amount:amt,productId:'',quantity:0,unitPrice:0,totalAmount:0,
+    supplier:'',customerName:db.customers.find(c=>c.id===cid)?.name||'',remark:note});
+  closeSheet();toast('收款成功','s');renderCust();
+}
+
+// ===================== ME (我的) =====================
+function renderMe(){
+  let h=`<div class="cd"><div class="cd-b" style="padding:0">`;
+  const items=[
+    {ic:'📊',nm:'报表统计',ds:'出入库汇总和趋势',fn:'openReports()'},
+    {ic:'📋',nm:'产品管理',ds:`${db.products.length}种产品`,fn:'openProductMgmt()'},
+    {ic:'📝',nm:'库存盘点',ds:'校准系统与实际库存',fn:'openStocktaking()'},
+  ];
+  items.forEach(it=>{
+    h+=`<div class="lst-item" onclick="${it.fn}">
+      <div class="lst-ic" style="background:var(--pri-l)">${it.ic}</div>
+      <div class="lst-info"><div class="nm">${it.nm}</div><div class="ds">${it.ds}</div></div>
+      <span style="color:var(--g400)">›</span></div>`;
+  });
+  h+=`</div></div>`;
+
+  h+=`<div class="cd"><div class="cd-b" style="padding:0">`;
+  const items2=[
+    {ic:'💾',nm:'导出数据',ds:'备份为JSON文件',fn:'exportData()'},
+    {ic:'📂',nm:'导入数据',ds:'从备份文件恢复',fn:"$('importFile').click()"},
+    {ic:'📱',nm:'安装到桌面',ds:'添加到手机主屏幕',fn:'installPWA()'},
+  ];
+  items2.forEach(it=>{
+    h+=`<div class="lst-item" onclick="${it.fn}">
+      <div class="lst-ic" style="background:var(--g100)">${it.ic}</div>
+      <div class="lst-info"><div class="nm">${it.nm}</div><div class="ds">${it.ds}</div></div>
+      <span style="color:var(--g400)">›</span></div>`;
+  });
+  h+=`</div></div>`;
+
+  h+=`<input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">`;
+  h+=`<div style="text-align:center;padding:20px;color:var(--g400);font-size:12px">建材管家 v2.0<br>数据存储在本地浏览器中</div>`;
+  $('pg-me').innerHTML=h;
+}
+
+// ===================== SUB PAGES =====================
+
+// Reports
+function openReports(){
+  openSub('报表统计',container=>{
+    const today=new Date();const y=today.getFullYear();const m=today.getMonth();
+    const monthStart=`${y}-${S(m+1)}-01`;
+    const monthEnd=`${y}-${S(m+1)}-${S(new Date(y,m+1,0).getDate())}`;
+    container.innerHTML=`<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      <input type="date" class="fc" id="rFrom" value="${monthStart}" style="flex:1;min-width:0" onchange="doReport()">
+      <input type="date" class="fc" id="rTo" value="${monthEnd}" style="flex:1;min-width:0" onchange="doReport()">
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:16px">
+      <button class="btn btn-sm btn-gh" onclick="setRpt('month')">本月</button>
+      <button class="btn btn-sm btn-gh" onclick="setRpt('year')">本年</button>
+      <button class="btn btn-sm btn-gh" onclick="setRpt('all')">全部</button>
+    </div>
+    <div id="rptResult"></div>`;
+    doReport();
+  });
+}
+
+function setRpt(range){
+  const d=new Date(),y=d.getFullYear(),m=d.getMonth();
+  if(range==='month'){$('rFrom').value=`${y}-${S(m+1)}-01`;$('rTo').value=`${y}-${S(m+1)}-${S(new Date(y,m+1,0).getDate())}`}
+  else if(range==='year'){$('rFrom').value=`${y}-01-01`;$('rTo').value=`${y}-12-31`}
+  else{$('rFrom').value='';$('rTo').value=''}
+  doReport();
+}
+
+function doReport(){
+  const from=$('rFrom').value,to=$('rTo').value;
+  let recs=db.records.filter(r=>r.type==='in'||r.type==='out');
+  if(from)recs=recs.filter(r=>r.date>=from);
+  if(to)recs=recs.filter(r=>r.date<=to);
+  const inR=recs.filter(r=>r.type==='in'),outR=recs.filter(r=>r.type==='out');
+  const tIn=inR.reduce((s,r)=>s+r.quantity,0),tOut=outR.reduce((s,r)=>s+r.quantity,0);
+  const tInA=inR.reduce((s,r)=>s+(r.totalAmount||0),0),tOutA=outR.reduce((s,r)=>s+(r.totalAmount||0),0);
+
+  let h=`<div class="st-grid">
+    <div class="st-card c-g"><div class="lb">入库</div><div class="vl">${fmtN(tIn)}</div><div class="sb">${inR.length}笔${tInA?' · '+fmtM(tInA):''}</div></div>
+    <div class="st-card c-o"><div class="lb">出库</div><div class="vl">${fmtN(tOut)}</div><div class="sb">${outR.length}笔${tOutA?' · '+fmtM(tOutA):''}</div></div></div>`;
+
+  // Top products
+  const inByP={},outByP={};
+  inR.forEach(r=>{if(!inByP[r.productId])inByP[r.productId]={q:0,a:0};inByP[r.productId].q+=r.quantity;inByP[r.productId].a+=(r.totalAmount||0)});
+  outR.forEach(r=>{if(!outByP[r.productId])outByP[r.productId]={q:0,a:0};outByP[r.productId].q+=r.quantity;outByP[r.productId].a+=(r.totalAmount||0)});
+
+  const topIn=Object.entries(inByP).sort((a,b)=>b[1].q-a[1].q).slice(0,5);
+  const topOut=Object.entries(outByP).sort((a,b)=>b[1].q-a[1].q).slice(0,5);
+
+  if(topIn.length){
+    h+=`<div class="cd"><div class="cd-h"><h3>入库 TOP 5</h3></div><div class="cd-b" style="padding:0">`;
+    topIn.forEach(([pid,d],i)=>{
+      h+=`<div class="lst-item"><div class="lst-ic" style="background:var(--suc-l);font-size:14px;font-weight:700">${i+1}</div>
+        <div class="lst-info"><div class="nm">${pName(pid)}</div></div>
+        <div class="lst-right"><div class="vl">${fmtN(d.q)}</div><div class="sb">${d.a?fmtM(d.a):'-'}</div></div></div>`;
+    });
+    h+=`</div></div>`;
+  }
+  if(topOut.length){
+    h+=`<div class="cd"><div class="cd-h"><h3>出库 TOP 5</h3></div><div class="cd-b" style="padding:0">`;
+    topOut.forEach(([pid,d],i)=>{
+      h+=`<div class="lst-item"><div class="lst-ic" style="background:var(--wrn-l);font-size:14px;font-weight:700">${i+1}</div>
+        <div class="lst-info"><div class="nm">${pName(pid)}</div></div>
+        <div class="lst-right"><div class="vl">${fmtN(d.q)}</div><div class="sb">${d.a?fmtM(d.a):'-'}</div></div></div>`;
+    });
+    h+=`</div></div>`;
+  }
+
+  // Receivables summary
+  const custRecv=db.customers.map(c=>({...c,recv:getCustReceivable(c.id)})).filter(c=>c.recv.balance>0).sort((a,b)=>b.recv.balance-a.recv.balance);
+  if(custRecv.length){
+    h+=`<div class="cd"><div class="cd-h"><h3>应收款明细</h3></div><div class="cd-b" style="padding:0">`;
+    custRecv.forEach(c=>{
+      h+=`<div class="lst-item"><div class="lst-info"><div class="nm">${c.name}</div>
+        <div class="ds">累计${fmtM(c.recv.total)} · 已收${fmtM(c.recv.paid)}</div></div>
+        <div class="lst-right"><div class="vl" style="color:var(--dan)">${fmtM(c.recv.balance)}</div></div></div>`;
+    });
+    h+=`</div></div>`;
+  }
+
+  $('rptResult').innerHTML=h;
+}
+
+// Product Management
+function openProductMgmt(){
+  openSub('产品管理',container=>{
+    let h=`<div class="srch"><input placeholder="搜索产品..." id="pmS" oninput="renderPMList()"></div>
+      <button class="btn btn-pri btn-block" style="margin-bottom:12px" onclick="openAddProduct()">+ 新增产品</button>
+      <div id="pmList"></div>`;
+    container.innerHTML=h;renderPMList();
+  });
+}
+
+function renderPMList(){
+  const s=($('pmS')||{}).value||'';
+  const prods=db.products.filter(p=>{
+    if(s&&!p.name.toLowerCase().includes(s.toLowerCase()))return false;return true;
+  });
+  let h='';
+  ['木方','模板'].forEach(cat=>{
+    const items=prods.filter(p=>p.cat===cat);if(!items.length)return;
+    h+=`<div style="font-weight:600;padding:8px 0;color:var(--g600)">${cat} (${items.length})</div>`;
+    items.forEach(p=>{
+      h+=`<div class="lst-item">
+        <div class="lst-info"><div class="nm">${p.name}</div><div class="ds">${p.unit} · ${p.enabled?'启用':'停用'}</div></div>
+        <div class="lst-right"><div class="sb">${fmtN(getStock(p.id))} 库存</div>
+          <button class="btn btn-sm ${p.enabled?'btn-gh':'btn-pri'}" style="margin-top:4px;font-size:12px" onclick="toggleProd('${p.id}')">${p.enabled?'停用':'启用'}</button></div>
+      </div>`;
+    });
+  });
+  $('pmList').innerHTML=h||'<div class="empty"><p>无匹配产品</p></div>';
+}
+
+function toggleProd(id){const p=db.products.find(x=>x.id===id);if(p){p.enabled=!p.enabled;save();renderPMList();toast(p.enabled?'已启用':'已停用','i')}}
+
+function openAddProduct(){
+  let h=`<div class="fm"><label>类别</label>
+    <select class="fc" id="apCat" onchange="updateAPOpts()"><option value="木方">木方</option><option value="模板">模板</option></select></div>
+    <div class="fm"><label>材质</label><select class="fc" id="apMat"></select></div>
+    <div class="fm"><label>截面尺寸</label><select class="fc" id="apDim"></select></div>
+    <div class="fm" id="apLenG"><label>长度</label><select class="fc" id="apLen"></select></div>
+    <div class="fm" id="apThG" style="display:none"><label>厚度(cm)</label><select class="fc" id="apTh"></select></div>
+    <div class="fm"><label>单位</label><select class="fc" id="apUnit"><option value="根">根</option><option value="张">张</option></select></div>
+    <button class="btn btn-pri btn-block btn-lg" onclick="doAddProduct()">添加</button>`;
+  openSheet('新增产品',h);updateAPOpts();
+}
+
+function updateAPOpts(){
+  const cat=$('apCat').value;
+  if(cat==='木方'){
+    $('apMat').innerHTML=LM.map(m=>`<option>${m}</option>`).join('');
+    $('apDim').innerHTML=LD.map(d=>`<option>${d}</option>`).join('');
+    $('apLenG').style.display='';$('apThG').style.display='none';
+    $('apLen').innerHTML=LL.map(l=>`<option>${l}</option>`).join('');
+    $('apUnit').value='根';
+  } else {
+    $('apMat').innerHTML=BM.map(m=>`<option>${m}</option>`).join('');
+    $('apDim').innerHTML=BD.map(d=>`<option>${d}</option>`).join('');
+    $('apLenG').style.display='none';$('apThG').style.display='';
+    $('apTh').innerHTML=BT.map(t=>`<option>${t}</option>`).join('');
+    $('apUnit').value='张';
+  }
+}
+
+function doAddProduct(){
+  const cat=$('apCat').value,mat=$('apMat').value,dim=$('apDim').value,unit=$('apUnit').value;
+  let name,extra={};
+  if(cat==='木方'){const len=$('apLen').value;name=`${mat} ${dim} ${len}`;extra.length=len}
+  else{const th=$('apTh').value;name=`${mat} ${dim} ${th}cm`;extra.thickness=th}
+  if(db.products.some(p=>p.name===name&&p.cat===cat)){toast('产品已存在','w');return}
+  const mx=db.products.reduce((m,p)=>Math.max(m,parseInt(p.id.slice(1))||0),0);
+  db.products.push({id:'P'+String(mx+1).padStart(3,'0'),cat,name,material:mat,dimension:dim,unit,enabled:true,createdAt:Date.now(),...extra});
+  save();closeSheet();renderPMList();toast('已添加','s');
+}
+
+// Stocktaking
+function openStocktaking(){
+  openSub('库存盘点',container=>{
+    let h=`<div class="cd"><div class="cd-b">
+      <div class="fm"><label>日期</label><input type="date" class="fc" id="stD" value="${td()}"></div>
+      <div class="fm"><label>产品</label><select class="fc" id="stP" onchange="showStkSys()"></select></div>
+      <div class="fm"><label>系统库存</label><input class="fc" id="stSys" readonly></div>
+      <div class="fm"><label>实际库存</label><input type="number" class="fc" id="stAct" min="0" placeholder="输入实际数量" inputmode="numeric"></div>
+      <div class="fm"><label>备注</label><input class="fc" id="stRmk" placeholder="差异原因"></div>
+      <button class="btn btn-pri btn-block btn-lg" onclick="doStocktaking()">提交盘点</button>
+    </div></div>`;
+
+    // History
+    const adjRecs=db.records.filter(r=>r.type==='adjust_plus'||r.type==='adjust_minus').sort((a,b)=>b.createdAt-a.createdAt).slice(0,10);
+    if(adjRecs.length){
+      h+=`<div style="font-weight:600;margin:16px 0 8px">盘点历史</div>`;
+      adjRecs.forEach(r=>{
+        const isPlus=r.type==='adjust_plus';
+        h+=`<div class="lst-item"><div class="lst-ic" style="background:${isPlus?'var(--suc-l)':'var(--dan-l)'}">${isPlus?'📈':'📉'}</div>
+          <div class="lst-info"><div class="nm">${pName(r.productId)}</div><div class="ds">${r.date}${r.remark?' · '+r.remark:''}</div></div>
+          <div class="lst-right"><div class="vl" style="color:${isPlus?'var(--suc)':'var(--dan)'}">${isPlus?'+':'-'}${fmtN(r.quantity)}</div></div></div>`;
+      });
+    }
+
+    container.innerHTML=h;
+    // Populate product select
+    const sel=$('stP');
+    sel.innerHTML=db.products.filter(p=>p.enabled).map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+    showStkSys();
+  });
+}
+
+function showStkSys(){
+  const pid=$('stP').value;if(!pid)return;
+  $('stSys').value=getStock(pid)+' '+pUnit(pid);
+}
+
+function doStocktaking(){
+  const date=$('stD').value,pid=$('stP').value,actual=parseInt($('stAct').value),rmk=$('stRmk').value.trim();
+  if(!date||!pid){toast('请填写完整','e');return}
+  if(isNaN(actual)||actual<0){toast('请输入有效数量','e');return}
+  const sys=getStock(pid),diff=actual-sys;
+  if(diff===0){toast('实际与系统一致','i');return}
+  addRecord({type:diff>0?'adjust_plus':'adjust_minus',date,productId:pid,quantity:Math.abs(diff),
+    unitPrice:0,totalAmount:0,supplier:'',customerId:'',customerName:'',
+    remark:`[盘点] 系统${sys}→实际${actual}${rmk?'；'+rmk:''}`});
+  toast(`盘点完成: ${diff>0?'盘盈+':'盘亏'}${Math.abs(diff)}`,diff>0?'s':'w');
+  $('stAct').value='';$('stRmk').value='';showStkSys();
+  openStocktaking(); // Refresh
+}
+
+// ===================== DATA IMPORT/EXPORT =====================
+function exportData(){
+  const blob=new Blob([window.JSON.stringify(db,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=`建材管家_备份_${td()}.json`;
+  a.click();URL.revokeObjectURL(url);toast('备份已下载','s');
+}
+
+function importData(event){
+  const file=event.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const data=window.JSON.parse(e.target.result);
+      if(data.products&&data.records){
+        db=data;if(!db.customers)db.customers=[];
+        save();renderTab(curTab);toast('导入成功','s');
+      } else toast('格式不正确','e');
+    }catch(err){toast('导入失败','e')}
+  };
+  reader.readAsText(file);event.target.value='';
+}
+
+// ===================== PWA INSTALL =====================
+function installPWA(){
+  if(deferredInstall){deferredInstall.prompt();deferredInstall=null;toast('请确认安装','i')}
+  else toast('请用Chrome浏览器打开此页面后安装','w');
+}
+
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e});
+
+// Register service worker
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+
+// ===================== INIT =====================
+load();
+switchTab('dash');
+</script>
+</body>
+</html>
